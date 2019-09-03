@@ -25,7 +25,6 @@ End Node code
           End ui
           Begin gps
           Begin audio
-          got audio
           End gps
           End audio
           GPS: 150.5,-45.4
