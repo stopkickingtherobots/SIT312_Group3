@@ -45,7 +45,7 @@ recording_resample = signal.resample(recording_samples, 8000)
 resamples = b''
 for i in range(0, len(recording_resample)):
     resamples += (int(recording_resample[i].astype(numpy.int16)/32).to_bytes(4, byteorder='big', signed=True))
-print(resamples)
+#print(resamples)
 
 newrecording = AudioSegment(resamples, sample_width=2, frame_rate=8000, channels=1)
 newrecording.export("resample.wav", format="wav")     # Raw audio at 161KB per 10 seconds
