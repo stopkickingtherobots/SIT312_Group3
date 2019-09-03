@@ -8,10 +8,10 @@ End Node code
   
   end_node.py - the primary file that initiates the multhithreaded processing.
   
-  andrew_wireless.py - the wireless functionality; Andrew is to place code here
-  benn_gps.py        - the gps retrieval function; Benn is to place code here
-  ian_ui.py          - the ui & display function;  Ian is to place code here
-  sarah_ui.py        - the audio functionality;    Sarah is to place code here
+  andrew_wireless.py - the wireless functionality; Andrew is to place code here<br>
+  benn_gps.py        - the gps retrieval function; Benn is to place code here<br>
+  ian_ui.py          - the ui & display function;  Ian is to place code here<br>
+  sarah_ui.py        - the audio functionality;    Sarah is to place code here<br>
   
   Demonstration:
     Clone respository (All files in end-node folder) and store in a common directory.
