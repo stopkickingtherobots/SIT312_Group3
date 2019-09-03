@@ -25,7 +25,6 @@ def main(audio_queue_out, audio_queue_in):
     print('Begin audio')
 
     audio = audio_queue_in.get(2)
-    print('got audio')
     if audio is not None:
         play_audio(audio)
 
