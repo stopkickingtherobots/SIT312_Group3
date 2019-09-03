@@ -18,6 +18,7 @@ def refresh_status_bar():
     battery_level = pijuice.status.GetChargeLevel()['data']
     battery_label.config(text=str(battery_level)+"%")
 
+    # Implement check for connection to base station
     # if wifi_connection:
     #     wifi_img = ImageTk.PhotoImage(Image.open("./resources/wifi_on.png"))
     # else:
@@ -25,6 +26,7 @@ def refresh_status_bar():
     # wifi_label.configure(image=wifi_img)
     # wifi_label.image = wifi_img
 
+    # Implement check for gps connection
     # if gps_connection:
     #     gps_img = ImageTk.PhotoImage(Image.open("./resources/gps_on.png"))
     # else:
@@ -35,57 +37,87 @@ def refresh_status_bar():
     window.after(5000, refresh_status_bar)
 
 
-def voice_message_countdown(countdown):
+def display_voice_message_warning_countdown(countdown):
     activity_label.config(text="Record message in {0}".format(countdown))
+
+    # Callbacks need to be used here rather than sleep, otherwise the labels won't update
     if countdown == 1:
-        window.after(1000, lambda: record_voice_message(10))
+        window.after(1000, lambda: display_record_voice_message_countdown(10))
     else:
-        window.after(1000, lambda: voice_message_countdown(countdown-1))
+        window.after(
+            1000, lambda: display_voice_message_warning_countdown(countdown-1))
+        # Start thread for voice recording here
+        # window.after(1000, ***THREAD START***)
 
 
-def record_voice_message(timeframe):
+def display_record_voice_message_countdown(timeframe):
     if timeframe == 0:
-        activity_label.config(text="Message Sent!")
+        activity_label.config(text="Message recorded.")
+        enable_controls()
         return
-
     activity_label.config(text="Record your message\n{0}".format(timeframe))
-    window.after(1000, lambda: record_voice_message(timeframe-1))
+    window.after(
+        1000, lambda: display_record_voice_message_countdown(timeframe-1))
+
+
+def record_voice_message():
+    # Disable controls while recording audio
+    disable_controls()
+    display_voice_message_warning_countdown(3)
+
+
+def disable_controls():
+    rewind_button.config(state=DISABLED)
+    play_pause_button.config(state=DISABLED)
+    skip_button.config(state=DISABLED)
+    global is_input_enabled
+    is_input_enabled = False
+
+
+def enable_controls():
+    rewind_button.config(state=NORMAL)
+    play_pause_button.config(state=NORMAL)
+    skip_button.config(state=NORMAL)
+    global is_input_enabled
+    is_input_enabled = True
+
+
+def play_pause_audio():
+    global is_playing_audio
+    # Change play/pause state of audio playback here
+    text = "Pause" if is_playing_audio else "Play"
+    activity_label.config(text=text)
+    if is_playing_audio:
+        play_pause_button.configure(image=play_img)
+        play_pause_button.image = play_img
+
+    else:
+        play_pause_button.configure(image=pause_img)
+        play_pause_button.image = pause_img
+
+    is_playing_audio = not is_playing_audio
+
+
+def rewind_track():
+    # Restart current audio here
+    activity_label.config(text="Rewind")
+
+
+def skip_track():
+    # Jump to next track in queue here
+    activity_label.config(text="Skip")
 
 
 def monitor_input():
-    if (GPIO.input(rewind_pin) == GPIO.HIGH):
-        activity_label.config(text="Rewind")
-        while (GPIO.input(rewind_pin) == GPIO.HIGH):
-            pass
-
-    if (GPIO.input(play_pause_pin) == GPIO.HIGH):
-        global is_playing_audio
-        text = "Pause" if is_playing_audio else "Play"
-        activity_label.config(text=text)
-        is_playing_audio = not is_playing_audio
-        while (GPIO.input(play_pause_pin) == GPIO.HIGH):
-            pass
-
-    if (GPIO.input(skip_pin) == GPIO.HIGH):
-        activity_label.config(text="Skip")
-        while (GPIO.input(skip_pin) == GPIO.HIGH):
-            pass
-
-    if (GPIO.input(mic_pin) == GPIO.HIGH):
-        voice_message_countdown(3)
-        while (GPIO.input(skip_pin) == GPIO.HIGH):
-            pass
+    if is_input_enabled:
+        if (GPIO.input(mic_pin) == GPIO.HIGH):
+            record_voice_message()
 
     window.after(100, monitor_input)
 
 
 GPIO.setmode(GPIO.BOARD)
-play_pause_pin = 35
-GPIO.setup(play_pause_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-rewind_pin = 37
-GPIO.setup(rewind_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-skip_pin = 33
-GPIO.setup(skip_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
+
 mic_pin = 40
 GPIO.setup(mic_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
 emergency_pin = 38
@@ -96,6 +128,7 @@ GPIO.setup(piezo_pin, GPIO.OUT)
 pijuice = PiJuice(1, 0x14)
 
 is_playing_audio = False
+is_input_enabled = True
 
 window = Tk()
 window.config(cursor='none')
@@ -146,6 +179,43 @@ activity_frame.pack(side=TOP)
 activity_label = Label(activity_frame, text="Pause",
                        font=("Times New Roman", 24, "bold"))
 activity_label.pack(side=TOP)
+
+play_img = ImageTk.PhotoImage(Image.open("./resources/play_button.png"))
+pause_img = ImageTk.PhotoImage(Image.open("./resources/pause_button.png"))
+rewind_img = ImageTk.PhotoImage(Image.open("./resources/back_button.png"))
+skip_img = ImageTk.PhotoImage(Image.open("./resources/forward_button.png"))
+
+playback_frame = Frame(window)
+playback_frame.pack(side=BOTTOM)
+
+rewind_button = Button(playback_frame, image=rewind_img,
+                       command=rewind_track)
+rewind_button.pack(side=LEFT)
+
+play_pause_button = Button(
+    playback_frame, image=play_img, command=play_pause_audio)
+play_pause_button.pack(side=LEFT)
+
+skip_button = Button(playback_frame, image=skip_img, command=skip_track)
+skip_button.pack(side=RIGHT)
+
+
+# # playback controls frame
+# playback_frame=Frame(window)
+# playback_frame.pack(side=BOTTOM)
+
+# rewind_img=ImageTk.PhotoImage(Image.open("./resources/back_button.png"))
+# rewind_button=Button(playback_frame, image=rewind_img, command=rewind_track)
+# rewind_button.pack(side=LEFT)
+
+# play_pause_img=ImageTk.PhotoImage(Image.open("./resources/play_button.png"))
+# play_pause_button=Button(
+#     playback_frame, image=play_pause_img, command=play_pause_audio)
+# play_pause_button.pack(side=LEFT)
+
+# skip_img=ImageTk.PhotoImage(Image.open("./resources/forward_button.png"))
+# skip_button=Button(playback_frame, image=skip_img, command=skip_track)
+# skip_button.pack(side=RIGHT)
 
 
 window.protocol("WM_DELETE_WINDOW", close)
