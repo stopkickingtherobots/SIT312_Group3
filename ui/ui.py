@@ -11,6 +11,7 @@ class deviceUI():
         #Test data
         self.test_track_info = [{"title": "Test Track 1", "length": 215}, {"title": "Test Track 2", "length": 351}, {"title": "Test Track 3", "length": 111}]
         self.current_track = 0
+        self.test_messages = ["This is test message 1", "This is test message 1", "This is a really really really really really really long test message", "More test messages incoming", "How about a nice relaxing test massage?", "This is another test message"]
 
         self.is_playing_audio = False
         self.is_input_enabled = True
@@ -24,13 +25,15 @@ class deviceUI():
         self.__load_graphics()
         self.__build_status_frame()
         self.__add_padding_frame()
-        self.__build_info_frame()
+        self.__build_header_frame("Messages")
+        self.__build_messages_frame()
+        self.__add_padding_frame()
+        self.__build_header_frame("Available Tracks")
+        self.__build_tracklist_frame()
         self.__add_padding_frame()
         self.__build_playback_frame()
         self.__add_padding_frame()
-        self.__build_control_frame()
-
-        self.window.protocol("WM_DELETE_WINDOW", self.close)      
+        self.__build_control_frame()        
 
     def __initialise_hardware(self):
         self.pijuice = PiJuice(1, 0x14)
@@ -49,6 +52,7 @@ class deviceUI():
         self.window['bg'] = "white"
         #self.window.overrideredirect(True)
         self.window.title(' ')
+        self.window.protocol("WM_DELETE_WINDOW", self.close)      
 
     def __load_graphics(self):
         self.battery_img = ImageTk.PhotoImage(Image.open("./resources/battery.png"))
@@ -91,32 +95,54 @@ class deviceUI():
         new_frame = Frame(self.window, height=20, bg="white")
         new_frame.pack()
 
-    def __build_info_frame(self):
-        self.info_frame = Frame(self.window, borderwidth=1, relief="solid")
-        self.info_frame.pack(side=TOP)
-        self.info_label = Label(self.info_frame, text="Pause", font=("Times New Roman", 24, "bold"))
-        self.info_label.pack(side=TOP)
+    def __build_header_frame(self, text):
+        header_frame = Frame(self.window, bg="white")
+        header_frame.pack(side=TOP)
+        header = Label(header_frame, text=text)
+        header.pack()
+
+    def __build_messages_frame(self):
+        self.messages_frame = Frame(self.window, borderwidth=1, relief="solid", bg="white")
+        self.messages_frame.pack(side=TOP, fill=X)
+        self.message_scrollbar = Scrollbar(self.messages_frame)
+        self.message_scrollbar.pack(side=RIGHT, fill=Y)
+        self.messages_list = Listbox(self.messages_frame, yscrollcommand=self.message_scrollbar.set, width=300, height=5)
+        for s in self.test_messages:
+            self.messages_list.insert(END, s)
+        self.messages_list.pack(side=LEFT, fill=BOTH)
+        self.message_scrollbar.config(command=self.messages_list.yview)
+
+    def __build_tracklist_frame(self):
+        self.tracklist_frame = Frame(self.window, borderwidth=1, relief="solid")
+        self.tracklist_frame.pack(side=TOP)
+        self.tracklist_scrollbar = Scrollbar(self.tracklist_frame)
+        self.tracklist_scrollbar.pack(side=RIGHT, fill=Y)
+        self.tracklist_list = Listbox(self.tracklist_frame, yscrollcommand=self.tracklist_scrollbar.set, width=300, height=5)
+        for t in self.test_track_info:
+            self.tracklist_list.insert(END, t["title"])
+        self.tracklist_list.pack(side=LEFT, fill=BOTH)
+        self.tracklist_scrollbar.config(command=self.tracklist_list.yview)
 
     def __build_playback_frame(self):
-        self.playback_info_frame = Frame(self.window)
-        self.playback_info_frame.pack()
+        self.playback_tracklist_frame = Frame(self.window)
+        self.playback_tracklist_frame.pack()
         
-        self.play_pause_display_icon = Label(self.playback_info_frame, image=self.pause_icon, padx=10)
+        self.play_pause_display_icon = Label(self.playback_tracklist_frame, image=self.pause_icon, padx=10)
         self.play_pause_display_icon.pack(side=LEFT)
 
-        self.playback_prog_bar = ttk.Progressbar(self.playback_info_frame, orient="horizontal", length=150, mode="determinate")
+        self.playback_prog_bar = ttk.Progressbar(self.playback_tracklist_frame, orient="horizontal", length=150, mode="determinate")
         self.playback_prog_bar["value"] = 0
         self.playback_prog_bar["maximum"] = self.test_track_info[0]["length"]
         self.playback_prog_bar.pack(side=LEFT)
 
         mins = self.test_track_info[0]["length"]//60
         secs = self.test_track_info[0]["length"] % 60
-        self.playback_prog_label = Label(self.playback_info_frame, text="0:00 / {0}:{1}".format(mins, secs))
+        self.playback_prog_label = Label(self.playback_tracklist_frame, text="0:00 / {0}:{1}".format(mins, secs))
         self.playback_prog_label.pack(side=LEFT)
 
-        self.bottom_info_frame = Frame(self.window)
-        self.bottom_info_frame.pack()
-        self.track_label = Label(self.bottom_info_frame, text=self.test_track_info[0]["title"])
+        self.bottom_tracklist_frame = Frame(self.window)
+        self.bottom_tracklist_frame.pack()
+        self.track_label = Label(self.bottom_tracklist_frame, text=self.test_track_info[0]["title"])
         self.track_label.pack(side=BOTTOM)
 
     def __build_control_frame(self):
@@ -172,7 +198,8 @@ class deviceUI():
         self.display_voice_message_warning_countdown(3)
 
     def display_voice_message_warning_countdown(self, countdown):
-        self.info_label.config(text="Record message in {0}".format(countdown))
+        #A new window needs to be opened with the countdown
+        #self.info_label.config(text="Record message in {0}".format(countdown))
 
         # Callbacks need to be used here rather than sleep, otherwise the labels won't update
         if countdown == 1:
@@ -180,14 +207,14 @@ class deviceUI():
         else:
             window.after(1000, lambda: self.display_voice_message_warning_countdown(countdown-1))
             # Start thread for voice recording here
-            # window.after(1000, ***THREAD START***)
+            # window.after(1000, ***START THREAD HERE***)
 
     def display_record_voice_message_countdown(self, timeframe):
         if timeframe == 0:
-            self.info_label.config(text="Message recorded.")
+            #self.info_label.config(text="Message recorded.")
             self.enable_controls()
             return
-        self.info_label.config(text="Record your message\n{0}".format(timeframe))
+        #self.info_label.config(text="Record your message\n{0}".format(timeframe))
         self.window.after(1000, lambda: self.display_record_voice_message_countdown(timeframe-1))
 
     def disable_controls(self):
@@ -205,9 +232,8 @@ class deviceUI():
 
     def play_pause_audio(self):
         # Change play/pause state of audio playback here
-        text = "Pause" if self.is_playing_audio else "Play"
-        self.info_label.config(text=text)
         if self.is_playing_audio:
+            # Pause audio here
             self.play_pause_button.configure(image=self.play_img)
             self.play_pause_button.image = self.play_img
 
@@ -215,6 +241,7 @@ class deviceUI():
             self.play_pause_display_icon.image = self.pause_icon
 
         else:
+            #Play audio here
             self.play_pause_button.configure(image=self.pause_img)
             self.play_pause_button.image = self.pause_img
 
@@ -226,7 +253,6 @@ class deviceUI():
     def rewind_track(self):
         # Restart current audio here
         self.playback_prog_bar["value"] = 0
-        self.info_label.config(text="Rewind")
 
 
     def skip_track(self):
@@ -236,7 +262,6 @@ class deviceUI():
         text = self.test_track_info[self.current_track]["title"]
 
         self.track_label.config(text=text)
-        self.info_label.config(text="Skip")
 
     def update_playback_progress(self):
         if self.is_playing_audio:
