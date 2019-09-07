@@ -9,7 +9,7 @@ import RPi.GPIO as GPIO
 class deviceUI():
     def __init__(self):
         #Test data
-        self.test_track_info = [{"title": "Test Track 1", "length": 215}, {"title": "Test Track 2", "length": 351}, {"title": "Test Track 3", "length": 111}]
+        self.test_track_info = [{"title": "Test Track 1", "length": 215, "weight":1}, {"title": "Test Track 2", "length": 351, "weight":2}, {"title": "Test Track 3", "length": 111, "weight":3}]
         self.current_track = 0
         self.test_messages = ["This is test message 1", "This is test message 1", "This is a really really really really really really long test message", "More test messages incoming", "How about a nice relaxing test massage?", "This is another test message"]
 
@@ -117,10 +117,11 @@ class deviceUI():
         self.tracklist_frame.pack(side=TOP)
         self.tracklist_scrollbar = Scrollbar(self.tracklist_frame)
         self.tracklist_scrollbar.pack(side=RIGHT, fill=Y)
-        self.tracklist_list = Listbox(self.tracklist_frame, yscrollcommand=self.tracklist_scrollbar.set, width=300, height=5)
+        self.tracklist_list = Listbox(self.tracklist_frame, selectmode=SINGLE, yscrollcommand=self.tracklist_scrollbar.set, width=300, height=5)
         for t in self.test_track_info:
             self.tracklist_list.insert(END, t["title"])
         self.tracklist_list.pack(side=LEFT, fill=BOTH)
+        self.tracklist_list.activate(0)
         self.tracklist_scrollbar.config(command=self.tracklist_list.yview)
 
     def __build_playback_frame(self):
@@ -195,27 +196,47 @@ class deviceUI():
     def record_voice_message(self):
         # Disable controls while recording audio
         self.disable_controls()
+
+        self.recording_window = Tk()
+        self.recording_window.config(cursor='none')
+        self.recording_window.geometry('320x480')
+        self.recording_window['bg'] = "white"
+        self.recording_window.overrideredirect(True)
+        self.recording_window.title(' ')
+        self.recording_window.protocol("WM_DELETE_WINDOW", self.recording_window.destroy)           
+
+        padding_frame = Frame(self.recording_window, height=100, bg="white")
+        padding_frame.pack()
+
+        self.recording_frame = Frame(self.recording_window, bg="white")
+        self.recording_frame.pack(side=TOP)
+
+        recording_font = tkinter.font.Font(family="Times New Roman", size=24, weight="bold")
+        self.countdown_label = Label(self.recording_frame, text="", bg="white", font=recording_font)
+        self.countdown_label.pack(side=TOP)        
+
         self.display_voice_message_warning_countdown(3)
+        self.recording_window.mainloop()
 
     def display_voice_message_warning_countdown(self, countdown):
         #A new window needs to be opened with the countdown
-        #self.info_label.config(text="Record message in {0}".format(countdown))
+        self.countdown_label.config(text="Record message in {0}".format(countdown))
 
         # Callbacks need to be used here rather than sleep, otherwise the labels won't update
         if countdown == 1:
-            window.after(1000, lambda: self.display_record_voice_message_countdown(10))
+            self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(10))
         else:
-            window.after(1000, lambda: self.display_voice_message_warning_countdown(countdown-1))
+            self.recording_window.after(1000, lambda: self.display_voice_message_warning_countdown(countdown-1))
             # Start thread for voice recording here
-            # window.after(1000, ***START THREAD HERE***)
+            # self.recording_window.after(1000, ***START THREAD HERE***)
 
     def display_record_voice_message_countdown(self, timeframe):
         if timeframe == 0:
-            #self.info_label.config(text="Message recorded.")
             self.enable_controls()
+            self.recording_window.destroy()
             return
-        #self.info_label.config(text="Record your message\n{0}".format(timeframe))
-        self.window.after(1000, lambda: self.display_record_voice_message_countdown(timeframe-1))
+        self.countdown_label.config(text="Record your message\n{0}".format(timeframe))
+        self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(timeframe-1))
 
     def disable_controls(self):
         self.rewind_button.config(state=DISABLED)
@@ -251,14 +272,26 @@ class deviceUI():
         self.is_playing_audio = not self.is_playing_audio
 
     def rewind_track(self):
-        # Restart current audio here
-        self.playback_prog_bar["value"] = 0
+        if self.playback_prog_bar["value"] < 2:
+            #Rewind to previous track here
+            self.current_track = len(self.test_track_info) -1 if self.current_track == 0 else self.current_track-1
+            self.tracklist_list.activate(self.current_track)
+            text = self.test_track_info[self.current_track]["title"]
+            self.track_label.config(text=text)
+        else:
+            # Restart current audio here
+            pass    
+        self.playback_prog_bar["value"] = 0    
 
 
     def skip_track(self):
         # Jump to next track in queue here
         self.playback_prog_bar["value"] = 0
-        self.current_track += 1
+        if self.current_track == len(self.test_track_info)-1:
+            self.current_track = 0
+        else:
+            self.current_track += 1
+        self.tracklist_list.activate(self.current_track)
         text = self.test_track_info[self.current_track]["title"]
 
         self.track_label.config(text=text)
