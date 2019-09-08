@@ -321,7 +321,7 @@ class Ui_MainWindow(object):
         self.widget = QtWebEngineWidgets.QWebEngineView(self.tab_3)
         self.widget.setGeometry(QtCore.QRect(0, 0, 751, 521))
         self.widget.setAutoFillBackground(True)
-        self.widget.load(QtCore.QUrl().fromLocalFile(os.path.split(os.path.abspath(__file__))[0]+r'\html\plot_points_to_map.html'))
+        self.widget.load(QtCore.QUrl().fromLocalFile(os.path.split(os.path.abspath(__file__))[0]+r'\html\tracking_realtime.html'))
         self.widget.show()
         self.widget.setObjectName("widget")
         #---------------------------------------------------------------
