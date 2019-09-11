@@ -13,9 +13,9 @@ class deviceUI():
         self.current_track = 0
         self.test_messages = ["This is test message 1", "This is test message 1", "This is a really really really really really really long test message", "More test messages incoming", "How about a nice relaxing test massage?", "This is another test message"]
 
+        self.is_distress_active = False
         self.is_playing_audio = False
         self.is_input_enabled = True
-        #TODO: Implement controller for connectivity bools
         self.is_gps_connected = True
         self.is_basestation_connected = True
 
@@ -42,8 +42,11 @@ class deviceUI():
         GPIO.setup(self.mic_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
         self.emergency_pin = 38
         GPIO.setup(self.emergency_pin, GPIO.IN, pull_up_down=GPIO.PUD_DOWN)
-        self.piezo_pin = 36
+
+        self.piezo_pin = 37
         GPIO.setup(self.piezo_pin, GPIO.OUT)
+        self.pwm = GPIO.PWM(self.piezo_pin, 400)
+        self.pwm.start(0)
 
     def __initialise_window(self):
         self.window = Tk()
@@ -163,11 +166,11 @@ class deviceUI():
         self.window.after(5000, self.refresh_status_bar)
         self.window.after(100, self.monitor_input)
         self.window.after(1000, self.update_playback_progress)
+        self.display_msg("New message")
         self.window.mainloop()
 
     def close(self):
         self.window.destroy()
-        GPIO.cleanup()
 
     def refresh_status_bar(self):
         self.date_time_label.config(text=strftime("%H:%M  %d/%m/%Y", localtime()), font=self.status_font)
@@ -194,7 +197,6 @@ class deviceUI():
         self.window.after(5000, self.refresh_status_bar)
 
     def record_voice_message(self):
-        # Disable controls while recording audio
         self.disable_controls()
 
         self.recording_window = Tk()
@@ -219,21 +221,20 @@ class deviceUI():
         self.recording_window.mainloop()
 
     def display_voice_message_warning_countdown(self, countdown):
-        #A new window needs to be opened with the countdown
         self.countdown_label.config(text="Record message in {0}".format(countdown))
 
-        # Callbacks need to be used here rather than sleep, otherwise the labels won't update
         if countdown == 1:
             self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(10))
         else:
             self.recording_window.after(1000, lambda: self.display_voice_message_warning_countdown(countdown-1))
-            # Start thread for voice recording here
+            # TODO: Start thread for voice recording here
             # self.recording_window.after(1000, ***START THREAD HERE***)
 
     def display_record_voice_message_countdown(self, timeframe):
         if timeframe == 0:
             self.enable_controls()
             self.recording_window.destroy()
+            self.window.after(100, self.monitor_input)
             return
         self.countdown_label.config(text="Record your message\n{0}".format(timeframe))
         self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(timeframe-1))
@@ -252,9 +253,8 @@ class deviceUI():
         self.is_input_enabled = True
 
     def play_pause_audio(self):
-        # Change play/pause state of audio playback here
         if self.is_playing_audio:
-            # Pause audio here
+            # TODO: Pause audio here
             self.play_pause_button.configure(image=self.play_img)
             self.play_pause_button.image = self.play_img
 
@@ -262,7 +262,7 @@ class deviceUI():
             self.play_pause_display_icon.image = self.pause_icon
 
         else:
-            #Play audio here
+            #TODO: Play audio here
             self.play_pause_button.configure(image=self.pause_img)
             self.play_pause_button.image = self.pause_img
 
@@ -273,19 +273,19 @@ class deviceUI():
 
     def rewind_track(self):
         if self.playback_prog_bar["value"] < 2:
-            #Rewind to previous track here
+            #TODO: Rewind to previous track here
             self.current_track = len(self.test_track_info) -1 if self.current_track == 0 else self.current_track-1
             self.tracklist_list.activate(self.current_track)
             text = self.test_track_info[self.current_track]["title"]
             self.track_label.config(text=text)
         else:
-            # Restart current audio here
+            # TODO: Restart current audio here
             pass    
         self.playback_prog_bar["value"] = 0    
 
 
     def skip_track(self):
-        # Jump to next track in queue here
+        # TODO: Jump to next track in queue here
         self.playback_prog_bar["value"] = 0
         if self.current_track == len(self.test_track_info)-1:
             self.current_track = 0
@@ -307,16 +307,62 @@ class deviceUI():
 
             text = "{0}:{1} / {2}:{3}".format(current_mins, current_secs, total_mins, total_secs)
             self.playback_prog_label.config(text=text)
-        self.window.after(1000, self.update_playback_progress)
+        self.window.after(1000, self.update_playback_progress)    
 
 
     def monitor_input(self):
         if self.is_input_enabled:
-            if (GPIO.input(self.mic_pin) == GPIO.HIGH):
+            if GPIO.input(self.mic_pin) == GPIO.HIGH:
                 self.record_voice_message()
+            if GPIO.input(self.emergency_pin) == GPIO.HIGH:
+                while GPIO.input(self.emergency_pin) == GPIO.HIGH:
+                    pass            
+                if self.is_distress_active:    
+                    self.is_distress_active = False                           
+                    self.distress_window.destroy()
+                else:
+                    if self.is_playing_audio:
+                        self.play_pause_audio()                            
+                    self.is_distress_active = True                    
+                    self.trigger_distress()                                 
 
-        self.window.after(100, self.monitor_input)
+        self.window.after(50, self.monitor_input)
+
+    def display_msg(self, msg):
+        self.messages_list.insert(0, msg)
+        self.pwm.ChangeDutyCycle(90)
+        sleep(0.2)
+        self.pwm.ChangeDutyCycle(0)
+        sleep(0.1)
+        self.pwm.ChangeDutyCycle(90)
+        sleep(0.2)
+        self.pwm.ChangeDutyCycle(0)
+
+    def trigger_distress(self):
+        #TODO: Send distress to base station here
+
+        self.distress_window = Tk()
+        self.distress_window.config(cursor='none')
+        self.distress_window.geometry('320x480')
+        self.distress_window['bg'] = "red"
+        #self.distress_window.overrideredirect(True)
+        self.distress_window.title(' ')
+        self.distress_window.protocol("WM_DELETE_WINDOW", self.distress_window.destroy)           
+
+        padding_frame = Frame(self.distress_window, height=100, bg="red")
+        padding_frame.pack()
+
+        self.distress_frame = Frame(self.distress_window, bg="red")
+        self.distress_frame.pack(side=TOP)
+
+        distress_font = tkinter.font.Font(family="Times New Roman", size=24, weight="bold")
+        self.distress_label = Label(self.distress_frame, text="DISTRESS BEACON ACTIVE", bg="white", font=distress_font)
+        self.distress_label.pack(side=TOP)          
+
+        self.distress_window.after(50, self.monitor_input) 
+        self.distress_window.mainloop()        
 
 if __name__ == "__main__":
     interface = deviceUI()
-    interface.start()
+    interface.start()    
+    sleep(5)
