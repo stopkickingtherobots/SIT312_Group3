@@ -16,13 +16,11 @@ import collections  # Used for Double ended Queue (deque) structure
 from scipy import signal
 import numpy
 from pydub import AudioSegment
+from multiprocessing import Process
 
 
 class deviceUI():
     def __init__(self):
-        #Test data        
-        self.test_messages = ["This is test message 1", "This is test message 1", "This is a really really really really really really long test message", "More test messages incoming", "How about a nice relaxing test massage?", "This is another test message"]
-
         self.is_distress_active = False
         self.is_playing_audio = False
         self.is_paused = False
@@ -222,7 +220,7 @@ class deviceUI():
         self.recording_window.config(cursor='none')
         self.recording_window.geometry('320x480')
         self.recording_window['bg'] = "white"
-        self.recording_window.overrideredirect(True)
+        #self.recording_window.overrideredirect(True)
         self.recording_window.title(' ')
         self.recording_window.protocol("WM_DELETE_WINDOW", self.recording_window.destroy)           
 
@@ -242,21 +240,22 @@ class deviceUI():
     def display_voice_message_warning_countdown(self, countdown):
         self.countdown_label.config(text="Record message in {0}".format(countdown))
 
-        if countdown == 1:
+        if countdown == 1:         
             self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(10))
         else:
             self.recording_window.after(1000, lambda: self.display_voice_message_warning_countdown(countdown-1))
-            # TODO: Start thread for voice recording here
-            # self.recording_window.after(1000, ***START THREAD HERE***)
+            
 
-    def display_record_voice_message_countdown(self, timeframe):
-        if timeframe == 0:
-            self.enable_controls()
-            self.recording_window.destroy()
-            self.window.after(100, self.monitor_input)
-            return
-        self.countdown_label.config(text="Record your message\n{0}".format(timeframe))
-        self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(timeframe-1))
+    def display_record_voice_message_countdown(self, timeframe):              
+        # if timeframe == 0:
+        #     self.enable_controls()
+        #     self.recording_window.destroy()
+        #     self.window.after(100, self.monitor_input)
+        #     return
+        # self.countdown_label.config(text="Record your message\n{0}".format(timeframe))
+        # self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(timeframe-1))
+        self.countdown_label.config(text="Record a 10 second message.")
+        self.record_audio()
 
     def disable_controls(self):
         self.rewind_button.config(state=DISABLED)
@@ -348,7 +347,10 @@ class deviceUI():
                 while GPIO.input(self.emergency_pin) == GPIO.HIGH:
                     pass            
                 if self.is_distress_active:    
-                    self.is_distress_active = False                           
+                    self.is_distress_active = False      
+                    with open("distress.txt", "w") as file:
+                        #This wipes the distress.txt file
+                        pass
                     self.distress_window.destroy()
                 else:
                     if self.is_playing_audio:
@@ -374,9 +376,11 @@ class deviceUI():
             self.pwm.ChangeDutyCycle(90)
             sleep(0.2)
             self.pwm.ChangeDutyCycle(0)
+        self.window.after(15000, self.build_messages_list)
 
     def trigger_distress(self):
-        #TODO: Send distress to base station here
+        with open("distress.txt", "w") as file:
+            file.write("Distress active")
 
         self.distress_window = Tk()
         self.distress_window.config(cursor='none')
@@ -447,7 +451,48 @@ class deviceUI():
         self.player.unpause()
 
     def restart(self):
-        self.play()
+        self.play()    
+
+    def record_audio(self):	
+        # Define Audio characteristics
+        FORMAT = pyaudio.paInt16
+        CHANNELS = 1
+        RATE = 48000
+        CHUNK = 1024
+        RECORD_SECONDS = 10
+        
+        # Audio Recording
+        audio = pyaudio.PyAudio()
+        
+        # start Recording
+        stream = audio.open(format=FORMAT, channels=CHANNELS,rate=RATE, input=True,frames_per_buffer=CHUNK)
+        print ('recording...')
+        
+        data = stream.read(int(RATE/CHUNK) * CHUNK * RECORD_SECONDS)
+        print ('finished recording')
+        
+        # stop Recording
+        stream.stop_stream()
+        stream.close()
+        audio.terminate()
+        
+        # Exporting / SciPy resampling
+        recording = AudioSegment(data, sample_width=2, frame_rate=RATE, channels=1)
+        recording_samples = recording.get_array_of_samples()
+        recording_resample = signal.resample(recording_samples, 8000)
+        resamples = b''
+        
+        for i in range(0, len(recording_resample)):
+            resamples += (int(recording_resample[i].astype(numpy.int16)).to_bytes(8, byteorder='big', signed=True))
+        #print(resamples)
+        
+        newrecording = AudioSegment(resamples, sample_width=2, frame_rate=8000, channels=1)
+        newrecording.export("message.ogg", format = "ogg")
+        
+        print('Done export')
+        self.enable_controls()
+        self.recording_window.destroy()
+        self.window.after(100, self.monitor_input)
 
 
 if __name__ == "__main__":
