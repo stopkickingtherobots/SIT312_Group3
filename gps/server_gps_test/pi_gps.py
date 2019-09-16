@@ -55,7 +55,7 @@ def main(gps_queue):
     #gps.send_command(b'PMTK314,1,1,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0')
 
     # Set update rate to once a second (1hz) which is what you typically want.
-    gps.send_command(b'PMTK220,1000')
+    gps.send_command(b'PMTK220,10000')
     # Or decrease to once every two seconds by doubling the millisecond value.
     # Be sure to also increase your UART timeout above!
     #gps.send_command(b'PMTK220,2000')
@@ -108,5 +108,17 @@ def main(gps_queue):
                 print('Height geo ID: {} meters'.format(gps.height_geoid))
 
             msg = Data_Segment('gps',1,1,[gps.latitude, gps.longitude, gps.timestamp_utc])
+
+            # Write to text file 
+            file = open("gps_coordinates.txt","w") 
+            file.write(str(gps.latitude) + ",  " + str(gps.longitude) + ",  " 
+            + '{}/{}/{} {:02}:{:02}:{:02}'.format(
+                gps.timestamp_utc.tm_year, 
+                gps.timestamp_utc.tm_mon,   
+                gps.timestamp_utc.tm_mday,                   
+                gps.timestamp_utc.tm_hour,  
+                gps.timestamp_utc.tm_min,   
+                gps.timestamp_utc.tm_sec)) 
+            file.close() 
 
             gps_queue.put(msg)

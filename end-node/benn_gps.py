@@ -7,7 +7,8 @@ def get_gps():
     # Return type may vary (utilising Data_Segment), 
     # str return used for demonstration.
     
-    """
+    # https://learn.adafruit.com/circuitpython-on-raspberrypi-linux/uart-serial
+    
     # Will wait for a fix and print a message every second with the current location
     # and other details.
     import time
@@ -63,28 +64,31 @@ def get_gps():
             #if gps.altitude_m is not None:
             #   print('Altitude: {} meters'.format(gps.altitude_m))
     
-    msg = str(gps.latitude) + ',' + str(gps.longitude)
+            # msg = str(gps.latitude) + ',' + str(gps.longitude)
+            # return msg
 
-    return msg
-    
-    """
-    lat = -32.939459
-    lon = 151.666162
+            msg = Data_Segment('gps',1,1,[gps.latitude, gps.longitude, gps.timestamp_utc])
 
-    msg = str(lat) + ',' + str(lon)
+            # Write to text file 
+            file = open("gps_coordinates.txt","w") 
+            file.write(str(gps.latitude) + ",  " + str(gps.longitude) + ",  " 
+            + '{}/{}/{} {:02}:{:02}:{:02}'.format(
+                gps.timestamp_utc.tm_year, 
+                gps.timestamp_utc.tm_mon,   
+                gps.timestamp_utc.tm_mday,                   
+                gps.timestamp_utc.tm_hour,  
+                gps.timestamp_utc.tm_min,   
+                gps.timestamp_utc.tm_sec)) 
+            file.close()
 
-    return msg
+            gps_queue.put(msg)  
 
 def main(gps_queue_out):
     print('Begin gps')
 
-    #while(True): # Normally this will be an infinite loop
-        #gps_msg = get_gps()
+    while(True): 
+        gps_msg = get_gps()
 
-        #gps_queue_out.put(gps_msg)
-
-    gps_msg = get_gps()
-
-    gps_queue_out.put(gps_msg)
+        gps_queue_out.put(gps_msg)
 
     print('End gps')

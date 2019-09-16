@@ -6,8 +6,11 @@ from PIL import ImageTk, Image
 from pijuice import PiJuice
 import RPi.GPIO as GPIO
 
+# from benn_gps import main as gps_main  
+
+
 class deviceUI():
-    def __init__(self):
+    def __init__(self): 
         #Test data
         self.test_track_info = [{"title": "Test Track 1", "length": 215, "weight":1}, {"title": "Test Track 2", "length": 351, "weight":2}, {"title": "Test Track 3", "length": 111, "weight":3}]
         self.current_track = 0
