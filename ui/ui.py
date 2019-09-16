@@ -8,7 +8,7 @@ import RPi.GPIO as GPIO
 import json
 from pathlib import Path
 import geopy.distance
-
+from time import strftime, strptime, localtime, gmtime, mktime
 import pygame
 import pyaudio      # Connects with Portaudio for audio device streaming
 import wave         # Used to save audio to .wav files
@@ -19,21 +19,9 @@ from pydub import AudioSegment
 from multiprocessing import Process
 
 
-# from benn_gps import main as gps_main  
-
-
 class deviceUI():
-<<<<<<< HEAD
-    def __init__(self): 
-        #Test data
-        self.test_track_info = [{"title": "Test Track 1", "length": 215, "weight":1}, {"title": "Test Track 2", "length": 351, "weight":2}, {"title": "Test Track 3", "length": 111, "weight":3}]
-        self.current_track = 0
-        self.test_messages = ["This is test message 1", "This is test message 1", "This is a really really really really really really long test message", "More test messages incoming", "How about a nice relaxing test massage?", "This is another test message"]
-
-=======
     def __init__(self):
         self.is_distress_active = False
->>>>>>> 1aa99f836343f12fceb8733688138e204192f6e9
         self.is_playing_audio = False
         self.is_paused = False
         self.is_input_enabled = True
@@ -252,22 +240,13 @@ class deviceUI():
     def display_voice_message_warning_countdown(self, countdown):
         self.countdown_label.config(text="Record message in {0}".format(countdown))
 
-        if countdown == 1:         
-            self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(10))
+        if countdown == 0:         
+            self.countdown_label.config(text="Record a 10 second message.")
+            self.recording_window.update_idletasks()
+            self.record_audio()
         else:
             self.recording_window.after(1000, lambda: self.display_voice_message_warning_countdown(countdown-1))
-            
-
-    def display_record_voice_message_countdown(self, timeframe):              
-        # if timeframe == 0:
-        #     self.enable_controls()
-        #     self.recording_window.destroy()
-        #     self.window.after(100, self.monitor_input)
-        #     return
-        # self.countdown_label.config(text="Record your message\n{0}".format(timeframe))
-        # self.recording_window.after(1000, lambda: self.display_record_voice_message_countdown(timeframe-1))
-        self.countdown_label.config(text="Record a 10 second message.")
-        self.record_audio()
+                  
 
     def disable_controls(self):
         self.rewind_button.config(state=DISABLED)
@@ -424,8 +403,24 @@ class deviceUI():
         self.playback_list = []
         with open("./audio/tracklist.json") as file:  
             data = json.load(file)
+        #TODO: Change file location to wherever Benn's GPS data is located
+        with open("gpsTest.txt", "r") as file:
+            data = file.read()
+        current_location = [c.strip() for c in data.split(',')]
+
+        #Ensure gps signal is recent
+        gps_time = strptime(current_location[2], "%Y/%m/%d %H:%M:%S")
+        current_time = gmtime()
+        diff = mktime(current_time)-mktime(gps_time)
+        if diff > 30:
+            self.is_gps_connected = False
+        else:
+            self.is_gps_connected = True
+            
+        current_location = (float(current_location[0]), float(current_location[1]))
+
         for d in data:
-            weight = self.calculate_distance(d)
+            weight = self.calculate_distance(d, current_location)
             if weight < self.poi_range_threshold or d["title"] == current_track["title"]:
                 entry = {"handle":"./audio/"+d["filename"], "title":d["title"], "length":d["length"], "weight": weight}  
             self.playback_list.append(entry)
@@ -439,15 +434,12 @@ class deviceUI():
         except:
             pass
 
-    def calculate_distance(self, d):
+    def calculate_distance(self, d, loc):
         if not d["lat"]:
-            return float("-inf")
+            return float("-inf")        
         
-        #TODO: Get the current lat and long as a tuple of floats
-        # current_location = [c.strip() for c in gps.get_gps().split(',')]
-        # current_location = (float(current_location[0]), float(current_location[1]))
-        # poi_location = (d["lat"], d["long"])
-        # return geopy.distance.vincenty(current_location, poi_location).km
+        poi_location = (d["lat"], d["long"])
+        return geopy.distance.vincenty(loc, poi_location).km
 
     def play(self):
         self.player.stop()                         # stops any track currently playing
@@ -472,7 +464,9 @@ class deviceUI():
         RATE = 48000
         CHUNK = 1024
         RECORD_SECONDS = 10
-        
+        FILENAME = "message"+strftime('%H:%M', localtime())
+        TARGET = "./audio/audio_out/"+FILENAME+".ogg"
+      
         # Audio Recording
         audio = pyaudio.PyAudio()
         
@@ -496,15 +490,23 @@ class deviceUI():
         
         for i in range(0, len(recording_resample)):
             resamples += (int(recording_resample[i].astype(numpy.int16)).to_bytes(8, byteorder='big', signed=True))
-        #print(resamples)
         
         newrecording = AudioSegment(resamples, sample_width=2, frame_rate=8000, channels=1)
-        newrecording.export("message.ogg", format = "ogg")
+        newrecording.export(TARGET, format = "ogg")
         
         print('Done export')
+
+        new_data = {"filename": FILENAME+".ogg", "is_sent": False}
+        with open("./audio/audio_out/outlist.json", "r+") as file:
+            data = list(json.load(file))
+            data.append(new_data)
+            file.seek(0)
+            json.dump(data, file)
+            file.truncate()   
+
         self.enable_controls()
         self.recording_window.destroy()
-        self.window.after(100, self.monitor_input)
+        #self.window.after(100, self.monitor_input)
 
 
 if __name__ == "__main__":
