@@ -3,6 +3,7 @@ import time
 from andrew_wireless import main as wireless_main
 from benn_gps import main as gps_main
 from ian_ui import main as ui_main
+from ui_display import main as ui_display
 from sarah_audio import main as audio_main
 
 if __name__ == "__main__":
@@ -23,10 +24,13 @@ if __name__ == "__main__":
 
     audio = Process(target = audio_main, args = (audio_queue_in, audio_queue_out,))
 
+    ui_display = Process(target = ui_display)
+
     wireless.start()    
     gps.start()
     ui.start()
     audio.start()
+    ui_display.start()
 
     # Give the processes time to start/run
     time.sleep(1)
