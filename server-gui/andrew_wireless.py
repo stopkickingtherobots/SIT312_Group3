@@ -16,6 +16,9 @@ import lzma
 import binascii
 import queue # for Queue.Empty exception
 import math
+import wave
+from scipy import signal
+from timeit import default_timer as timer # Used to report processing time
 
 @dataclass
 class Data_Segment:
@@ -62,14 +65,14 @@ def build_pickle(segment_arr):
 
     decompressed_result = lzma.decompress(result)
 
-    unpickled = pickle.loads(decompressed_result)
+    #unpickled = pickle.loads(decompressed_result)
 
-    un_hex = binascii.unhexlify(unpickled)
+    un_hex = binascii.unhexlify(decompressed_result)
 
     filename = 'test.mp3'
 
     fout = open(filename, 'wb')
-    fout.write(binascii.unhexlify(unpickled))
+    fout.write(un_hex)
     fout.close()
 
     wave_data = AudioSegment.from_file('test.mp3').get_array_of_samples()
@@ -123,9 +126,9 @@ def resample_audio(filename):
     signal_arr = numpy.zeros(int(nextpow2))
     signal_arr[0:len(wave_data)] = wave_data
 
-    start = timer()
+    #start = timer()
     recording_resample = signal.resample(signal_arr, int(len(signal_arr)/6)).astype(numpy.int16)
-    end = timer()
+    #end = timer()
 
     resample_len = int(len(recording_resample) * diff_rate)
 
@@ -142,27 +145,54 @@ def resample_audio(filename):
 
     pydub_audio = AudioSegment(resamples, sample_width=2, frame_rate=8000, channels=1)
 
-    pydub_audio.export("resample.mp3", format = "mp3", codec='libmp3lame')  # ~50% reduction in file size; 91KB per 10 seconds
+    pydub_audio.export(filename, format = "mp3", codec='libmp3lame')  # ~50% reduction in file size; 91KB per 10 seconds
     
     #print('Length of wav_data: {0:}'.format(len(wave_data)))
     #print('Length of signal_arr: {0:}'.format(len(signal_arr)))
     #print('Begin resampling')
     #print('Finished resampling: {0:} seconds'.format(end-start))
 
-    return 'resample.mp3'
+    return filename
 
 def prepare_audio(filename):
 
-    print('preparing audio')
+    resample_audio(filename)
 
     with open(filename, 'rb') as f:
         content = f.read()
     
-    pickled = pickle.dumps(binascii.hexlify(content))
+    #pickled = pickle.dumps(binascii.hexlify(content))
 
-    recording_arr = split_pickle(pickled)
+    compressed_bytes = lzma.compress(binascii.hexlify(content))
 
-    return recording_arr
+    bytes_per_msg = 125 # Xbee packet size limit
+    #length = len(compressed_bytes)
+    #bytes_in_data = length
+    bytes_in_data = len(compressed_bytes)
+    num_segments = math.ceil(bytes_in_data / bytes_per_msg)
+    result_arr = []
+    index = 0
+
+    for i in range(0, num_segments):
+        seg = Bytes_Segment(b'0x01', i, num_segments, compressed_bytes[index:index+bytes_per_msg])
+        index += bytes_per_msg
+        result_arr.append(seg)
+
+    # Troubleshooting statements, not for deployment
+    #byte_piece = compressed_bytes[0:bytes_per_msg]
+    #b = Bytes_Segment(b'0x01', 1, 1, compressed_bytes[index:index+bytes_per_msg])
+    #print('bytes    length: {0:}'.format(len(pickled)))
+    print('uncompress length: {0:}'.format(len(content)))
+    print('compress length: {0:}'.format(len(compressed_bytes)))
+    print('num_segments ceil: {0:}'.format(num_segments))
+    #print('Byte_piece size: {0:}'.format(getsizeof(byte_piece)))
+    #print('Data_Segment size: {0:}'.format(getsizeof(b)))
+
+    return result_arr
+
+    #recording_arr = split_pickle(pickled)
+
+    #return recording_arr
 
 def xbee_read(device):
 
@@ -194,12 +224,9 @@ def xbee_read(device):
             return data_segment            
         
         if rcv.data_type == b'0x02':   # Distress byte signature
-            #print('Server recieved distress')
-
-            #print('Sending ACK')
+            #print('Server recieved distress, sending ACK')
             bytes_obj = pickle.dumps('ACK')
             device.send_data(rcv_bytes.remote_device, bytes_obj)
-
             data_segment = Data_Segment('distress',rcv.data)
             return data_segment
 
@@ -227,7 +254,7 @@ def xbee_read(device):
 
 def xbee_write(device, data_segment):
 
-    print('xbee_writing: {0:}'.format(data_segment))
+    #print('xbee_writing: {0:}'.format(data_segment))
 
     data_arr = data_segment.data.split(',')
     
@@ -261,19 +288,19 @@ def xbee_write(device, data_segment):
             return 'ERROR'
 
     if data_segment.data_type == 'message':
-        print('Sending \'message\' from Server')
+        #print('Sending \'message\' from Server')
         msg = data_segment.data
         sending_arr = []
-        if len(msg) > 140:
+        if len(msg) > 125:
             print('\'message\' is greater than 140! length: {0:}'.format(len(msg)))
             x = pickle.dumps(msg)
             sending_arr = split_pickle(x)
         else:
             sending_arr.append(Bytes_Segment(b'0x04', 1, 1, data_segment.data))
-            print('message sending_arr: {0:}'.format(sending_arr))
+            #print('message sending_arr: {0:}'.format(sending_arr))
         for i in range(0, len(sending_arr)):
             bytes_obj = pickle.dumps(sending_arr[i])
-            print('Sending message bytes_obj')
+            #print('Sending message bytes_obj')
             device.send_data(remote_device, bytes_obj)
         try:
             device.flush_queues()
@@ -326,7 +353,7 @@ def main(gps_queue, distress_queue, message_queue, audio_queue_in, audio_queue_o
     device = XBeeDevice('COM3', 230400)
 
     device.open()
-    #device.flush_queues()
+    device.flush_queues()
 
     while(True):
         
@@ -339,11 +366,11 @@ def main(gps_queue, distress_queue, message_queue, audio_queue_in, audio_queue_o
             if data_segment.data_type == 'TIMEOUT':
                 pass
             if data_segment.data_type == 'gps':
-                print('Server got: {0:}'.format(data_segment))
+                #print('Server got: {0:}'.format(data_segment))
                 gps_queue.put(data_segment)
 
             if data_segment.data_type == 'audio':
-                print('Got audio segment from xbee read in main()')
+                #print('Got audio segment from xbee read in main()')
                 audio_queue_in.put(data_segment)
                 print('audio put on queue')
 
@@ -379,7 +406,7 @@ def main(gps_queue, distress_queue, message_queue, audio_queue_in, audio_queue_o
                         return
 
                 data_segment = Data_Segment('message', old_segment.data)
-                print('Got message from message queue in wireless.main(), writing to xbee')
+                #print('Got message from message queue in wireless.main(), writing to xbee')
                 result = xbee_write(device, data_segment)
                 if result != 'ACK':
                     print('Data_Segment: {0:} failed to send, dropping packet'.format(data_segment))

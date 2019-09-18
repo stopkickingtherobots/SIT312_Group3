@@ -43,10 +43,11 @@ def record_10_seconds():
     CHANNELS = 1
     RATE = 48000
     CHUNK = 1024
-    RECORD_SECONDS = 2
+    RECORD_SECONDS = 10
     path = 'audio/'
     MP3_OUTPUT_FILENAME = str(datetime.datetime.timestamp(datetime.datetime.now())) + '.mp3'
-
+    WAV_OUTPUT_FILENAME = str(datetime.datetime.timestamp(datetime.datetime.now())) + '.wav'
+    
     audio = pyaudio.PyAudio()
     
     # start Recording
@@ -65,9 +66,9 @@ def record_10_seconds():
 
     # Pydub addition - will export raw audio - data - into specified formats.
     recording = AudioSegment(data, sample_width=2, frame_rate=RATE, channels=1)
-    recording.export(path + MP3_OUTPUT_FILENAME, format="mp3")     # Raw audio at 161KB per 10 seconds
+    recording.export(path + WAV_OUTPUT_FILENAME, format="wav")     # Raw audio at 161KB per 10 seconds
 
-    return path + MP3_OUTPUT_FILENAME
+    return path + WAV_OUTPUT_FILENAME
 
 device_db = TinyDB('db/device.json')
 message_db = TinyDB('db/message.json')

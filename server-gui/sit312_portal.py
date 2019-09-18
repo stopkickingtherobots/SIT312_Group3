@@ -293,6 +293,7 @@ class Ui_MainWindow(object):
         self.is_recording = False
         self.recorded = False
         self.file_to_play = None
+        pygame.mixer.init()
         pygame.mixer.music.unload()
 
     def recorder_cancel_click(self):
