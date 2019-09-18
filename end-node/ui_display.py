@@ -430,6 +430,7 @@ class deviceUI():
             self.current_track_idx = next((index for (index, d) in enumerate(self.playback_list) if d["title"] == self.current_track["title"]))
         except:
             pass
+        self.window.after(15000, self.build_playback_list)
 
     def calculate_distance(self, d, loc):
         if not d["lat"]:
