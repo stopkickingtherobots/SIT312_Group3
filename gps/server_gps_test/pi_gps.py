@@ -15,7 +15,7 @@ from dataclasses import dataclass
 
 # for a computer, use the pyserial library for uart access
 import serial
-uart = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=3000)
+uart = serial.Serial("/dev/ttyUSB0", baudrate=9600, timeout=3000)
 
 @dataclass
 class Data_Segment:
