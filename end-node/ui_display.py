@@ -195,15 +195,12 @@ class deviceUI():
         battery_level = self.pijuice.status.GetChargeLevel()['data']
         self.battery_label.config(text=str(battery_level)+"%")
 
-        # TODO: Implement controller for base station connection status
         if self.is_basestation_connected:
             self.wifi_label.configure(image=self.wifi_on_img)
             self.wifi_label.image = self.wifi_on_img
         else:
             self.wifi_label.configure(image=self.wifi_off_img)
             self.wifi_label.image = self.wifi_off_img
-
-        # TODO: Implement controller for gps connection status
         if self.is_gps_connected:
             self.gps_label.configure(image=self.gps_on_img)
             self.gps_label.image = self.gps_on_img
@@ -433,6 +430,7 @@ class deviceUI():
             self.current_track_idx = next((index for (index, d) in enumerate(self.playback_list) if d["title"] == self.current_track["title"]))
         except:
             pass
+        self.window.after(15000, self.build_playback_list)
 
     def calculate_distance(self, d, loc):
         if not d["lat"]:
@@ -506,10 +504,8 @@ class deviceUI():
 
         self.enable_controls()
         self.recording_window.destroy()
-        #self.window.after(100, self.monitor_input)
 
 
 if __name__ == "__main__":
     interface = deviceUI()
     interface.start()    
-    sleep(5)

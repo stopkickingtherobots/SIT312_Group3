@@ -1,4 +1,4 @@
-from multiprocessing import Process, Queue # Used for multiprocessing
+from multiprocessing import Process, Queue
 from time import strftime, localtime
 import json
 
@@ -28,14 +28,10 @@ def get_audio():
     return False
 
 def main(audio_queue_out, audio_queue_in):
-    print('Begin audio')
-
-    audio = audio_queue_in.get(2)
+    audio = audio_queue_in.get()
     if audio != None:
         add_audio(audio)
 
     out_audio = get_audio()
     if out_audio:
         audio_queue_out.put(out_audio)
-
-    print('End audio')
