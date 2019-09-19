@@ -37,4 +37,3 @@ def main(gps_queue):
         if latitude and longitude is not None:
             dictionary = {"latitude": latitude, "longitude": longitude}
             pubnub.publish().channel('blue').message(dictionary).pn_async(publish_callback)
-            print('eol')  # End of Line

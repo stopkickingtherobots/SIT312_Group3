@@ -37,8 +37,6 @@ def main(gps_queue):
     # Create a GPS module instance.
     gps = adafruit_gps.GPS(uart, debug=False)
 
-    print('Test1')
-
     # Initialize the GPS module by changing what data it sends and at what rate.
     # These are NMEA extensions for PMTK_314_SET_NMEA_OUTPUT and
     # PMTK_220_SET_NMEA_UPDATERATE but you can send anything from here to adjust
