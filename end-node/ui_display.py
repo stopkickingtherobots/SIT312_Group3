@@ -29,7 +29,7 @@ class deviceUI():
         self.is_basestation_connected = True      
 
         self.poi_range_threshold = 0.1 #Poi trigger radius in km
-        self.current_track_idx = 0  
+        self.current_track_idx = None
         self.playback_list = []  
         self.player = pygame.mixer   
         pygame.mixer.init()   
@@ -50,7 +50,10 @@ class deviceUI():
         self.__build_playback_frame()
         self.__add_padding_frame()
         self.__build_control_frame() 
-        self.current_track = dict(self.playback_list[0])            
+        if self.playback_list:
+            self.current_track = dict(self.playback_list[0])
+        else:
+            self.current_track = None            
          
 
     def __initialise_hardware(self):        
@@ -152,17 +155,27 @@ class deviceUI():
 
         self.playback_prog_bar = ttk.Progressbar(self.playback_tracklist_frame, orient="horizontal", length=150, mode="determinate")
         self.playback_prog_bar["value"] = 0
-        self.playback_prog_bar["maximum"] = self.playback_list[0]["length"]
+        if self.playback_list:
+            self.playback_prog_bar["maximum"] = self.playback_list[0]["length"]
+        else:
+            self.playback_prog_bar["maximum"] = 0
         self.playback_prog_bar.pack(side=LEFT)
 
-        mins = self.playback_list[0]["length"]//60
-        secs = self.playback_list[0]["length"] % 60
+        if self.playback_list:
+            mins = self.playback_list[0]["length"]//60
+            secs = self.playback_list[0]["length"] % 60
+        else:
+            mins = 0
+            secs = 0
         self.playback_prog_label = Label(self.playback_tracklist_frame, text="0:00 / {0}:{1}".format(mins, secs))
         self.playback_prog_label.pack(side=LEFT)
 
         self.bottom_tracklist_frame = Frame(self.window)
         self.bottom_tracklist_frame.pack()
-        self.track_label = Label(self.bottom_tracklist_frame, text=self.playback_list[0]["title"])
+        if self.playback_list:
+            self.track_label = Label(self.bottom_tracklist_frame, text=self.playback_list[0]["title"])
+        else:
+            self.track_label = Label(self.bottom_tracklist_frame, text="No Tracks Available")
         self.track_label.pack(side=BOTTOM)
 
     def __build_control_frame(self):
@@ -291,15 +304,14 @@ class deviceUI():
             text = self.playback_list[self.current_track_idx]["title"]
             self.track_label.config(text=text)
             self.current_track = dict(self.playback_list[self.current_track_idx])
+            self.playback_prog_bar["maximum"] = self.current_track["length"]
             self.play()
         else:
             self.restart()
         self.playback_prog_bar["value"] = 0    
 
 
-    def skip_track(self):
-        self.playback_prog_bar["value"] = 0
-
+    def skip_track(self):       
         if self.current_track_idx == len(self.playback_list)-1:
             self.current_track_idx = 0
         else:
@@ -309,6 +321,8 @@ class deviceUI():
         text = self.playback_list[self.current_track_idx]["title"]
         self.track_label.config(text=text)        
         self.current_track = dict(self.playback_list[self.current_track_idx])
+        self.playback_prog_bar["value"] = 0
+        self.playback_prog_bar["maximum"] = self.current_track["length"]
         self.play()
 
     def update_playback_progress(self):
@@ -400,21 +414,23 @@ class deviceUI():
         self.playback_list = []
         with open("./audio/tracklist.json") as file:  
             data = json.load(file)
-        #TODO: Change file location to wherever Benn's GPS data is located
-        with open("gpsTest.txt", "r") as file:
+        with open("gps_coordinates.txt", "r") as file:
             data = file.read()
-        current_location = [c.strip() for c in data.split(',')]
+        if data:
+            current_location = [c.strip() for c in data.split(',')]
 
-        #Ensure gps signal is recent
-        gps_time = strptime(current_location[2], "%Y/%m/%d %H:%M:%S")
-        current_time = gmtime()
-        diff = mktime(current_time)-mktime(gps_time)
-        if diff > 30:
-            self.is_gps_connected = False
+            #Ensure gps signal is recent
+            gps_time = strptime(current_location[2], "%Y/%m/%d %H:%M:%S")
+            current_time = gmtime()
+            diff = mktime(current_time)-mktime(gps_time)
+            if diff > 30:
+                self.is_gps_connected = False
+            else:
+                self.is_gps_connected = True
+                
+            current_location = (float(current_location[0]), float(current_location[1]))
         else:
-            self.is_gps_connected = True
-            
-        current_location = (float(current_location[0]), float(current_location[1]))
+            current_location = (0, 0)
 
         for d in data:
             weight = self.calculate_distance(d, current_location)
