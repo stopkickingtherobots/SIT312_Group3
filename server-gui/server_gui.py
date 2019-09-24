@@ -45,7 +45,7 @@ class Distress_Object(QObject):
 
 class Audio_Object(QObject):
 
-    aSignal = Signal(Data_Segment)
+    bSignal = Signal(Data_Segment)
 
     def __init__(self, audio_queue_in):
         super(Audio_Object, self).__init__()
@@ -58,8 +58,11 @@ class Audio_Object(QObject):
         while(self.isRunning):
             try:
                 audio_msg = self.audio_queue_in.get()
+                print('Got something off audio_in queue')
                 if audio_msg is not None:
-                    self.aSignal.emit(audio_msg)
+                    print('got audio in server_gui.py: {0:}'.format(audio_msg))
+                    self.bSignal.emit(audio_msg)
+                    print('Finished emitting audio_msg signal')
                     continue
             except queue.Empty:
                 pass
@@ -83,7 +86,7 @@ def main(distress_queue, message_queue, audio_queue_out, audio_queue_in):
     app = QApplication(sys.argv)
 
     window = MainWindow(device_db, message_db, audio_sent_db, audio_recv_db, audio_queue_out, audio_queue_in, message_queue)
-
+    
     distress_reciever = window.ui.insert_distress_message
     distress_worker = Distress_Object(distress_queue)
     distress_worker.aSignal.connect(distress_reciever)
@@ -91,26 +94,14 @@ def main(distress_queue, message_queue, audio_queue_out, audio_queue_in):
     distress_worker.moveToThread(distress_thread)
     distress_thread.started.connect(distress_worker.run)
     distress_thread.start()
-
+    
     audio_reciever = window.ui.insert_audio_recieved
     audio_worker = Audio_Object(audio_queue_in)
-    audio_worker.aSignal.connect(audio_reciever)
+    audio_worker.bSignal.connect(audio_reciever)
     audio_thread = QThread()
     audio_worker.moveToThread(audio_thread)
     audio_thread.started.connect(audio_worker.run)
     audio_thread.start()
-
-    '''
-    message_reciever = window.ui.insert_distress_message
-    message_worker = Distress_Object(distress_queue)
-    message_worker.aSignal.connect(message_reciever)
-    message_thread = QThread()
-    message_worker.moveToThread(distress_thread)
-    distress_thread.started.connect(message_worker.run)
-    distress_thread.start()
-    '''
-
-    #print(distress_thread.isRunning())
 
     window.show()
     

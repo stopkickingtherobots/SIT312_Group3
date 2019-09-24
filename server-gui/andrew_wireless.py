@@ -6,6 +6,7 @@ from digi.xbee.devices import XBeeDevice
 from digi.xbee.devices import RemoteXBeeDevice
 from digi.xbee.devices import XBee64BitAddress
 from digi.xbee.exception import TimeoutException
+import datetime
 from pydub import AudioSegment
 from numpy import ndarray
 import numpy
@@ -60,27 +61,31 @@ def build_pickle(segment_arr):
     for i in range(0, len(segment_arr)):
         result += segment_arr[i].data
 
-    #print('\nrecv compress length: {0:}'.format(len(result)))
-    #print('compressed: {0:}'.format(result[0:20]))
+    print('\nrecv compress length: {0:}'.format(len(result)))
+    print('compressed: {0:}'.format(result[0:20]))
 
     decompressed_result = lzma.decompress(result)
 
     #unpickled = pickle.loads(decompressed_result)
 
-    un_hex = binascii.unhexlify(decompressed_result)
+    #un_hex = binascii.unhexlify(decompressed_result)
 
-    filename = 'test.mp3'
-
+    filename = str(datetime.datetime.timestamp(datetime.datetime.now())) + '.ogg'
+    wav_filename = 'audio/in/'+ str(datetime.datetime.timestamp(datetime.datetime.now())) + '.wav'
+    
     fout = open(filename, 'wb')
-    fout.write(un_hex)
+    fout.write(decompressed_result)
     fout.close()
 
-    wave_data = AudioSegment.from_file('test.mp3').get_array_of_samples()
+    wave_data = AudioSegment.from_file(filename).get_array_of_samples()
+    pydub_audio = AudioSegment(wave_data, sample_width=2, frame_rate=8000, channels=1)
+
+    pydub_audio.export(wav_filename, format = "wav")  # ~50% reduction in file size; 91KB per 10 seconds
     
     #print('recv bytes    length: {0:}'.format(len(decompressed_result)))
     #print('Array of samples server: {0:}'.format(len(wave_data)))
 
-    return filename
+    return wav_filename
 
 def split_pickle(pickled):
 
@@ -200,11 +205,11 @@ def xbee_read(device):
         #device.flush_queues()
         rcv_bytes = device.read_data(1)
         rcv = pickle.loads(rcv_bytes.data)
-        #print('xbee_read(): {0:}'.format(rcv))
+        print('xbee_read(): {0:}'.format(rcv))
         result = []
 
         if rcv.data_type == b'0x01':   # Audio byte signature
-            #print('Server recieved Audio')
+            print('Server recieved Audio')
             result = []
             result.append(rcv)
             for i in range(0, rcv.total_sequence - 1):
@@ -213,14 +218,17 @@ def xbee_read(device):
                 result.append(rcv)
             filename = build_pickle(result)
 
-            #print('Server recieved Audio message')
-            #print('Sending ACK')
+            print('Server recieved Audio message')
+            print('Sending ACK')
 
             bytes_obj = pickle.dumps('ACK')
             device.send_data(rcv_bytes.remote_device, bytes_obj)
             device.flush_queues()
 
-            data_segment = Data_Segment('audio', filename)
+            recv_addr = str(rcv_bytes.remote_device.get_64bit_addr())
+            time_stamp = str(datetime.datetime.timestamp(datetime.datetime.now()))
+
+            data_segment = Data_Segment('audio', recv_addr + ','+ time_stamp+','+filename)
             return data_segment            
         
         if rcv.data_type == b'0x02':   # Distress byte signature
@@ -288,7 +296,7 @@ def xbee_write(device, data_segment):
             return 'ERROR'
 
     if data_segment.data_type == 'message':
-        #print('Sending \'message\' from Server')
+        print('Sending \'message\' from Server')
         msg = data_segment.data
         sending_arr = []
         if len(msg) > 125:
@@ -350,7 +358,7 @@ def main(gps_queue, distress_queue, message_queue, audio_queue_in, audio_queue_o
 
     print('Begin Wireless')
 
-    device = XBeeDevice('COM3', 230400)
+    device = XBeeDevice('COM7', 230400)
 
     device.open()
     device.flush_queues()

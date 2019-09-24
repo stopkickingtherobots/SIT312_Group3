@@ -3,11 +3,12 @@ import time
 from andrew_wireless import main as wireless_main
 from benn_gps import main as gps_main
 from ian_ui import main as ui_main
+from ui_display import main as ui_display
 from sarah_audio import main as audio_main
 
 if __name__ == "__main__":
 
-    gps_queue = Queue()
+    gps_queue = Queue(maxsize=1)
 
     audio_queue_in = Queue()
     audio_queue_out = Queue()
@@ -15,7 +16,7 @@ if __name__ == "__main__":
     ui_queue_in = Queue()
     ui_queue_out = Queue()    
 
-    wireless = Process(target = wireless_main, args = (gps_queue,audio_queue_in, audio_queue_out, ui_queue_in, ui_queue_out,))
+    wireless = Process(target = wireless_main, args = (gps_queue, audio_queue_in, audio_queue_out, ui_queue_in, ui_queue_out,))
 
     gps = Process(target = gps_main, args = (gps_queue,))
 
@@ -23,10 +24,23 @@ if __name__ == "__main__":
 
     audio = Process(target = audio_main, args = (audio_queue_in, audio_queue_out,))
 
-    wireless.start()    
+    ui_display = Process(target = ui_display)
+
+    wireless.start()   
+    #print('Started Wireless')
+    #time.sleep(0.5) 
     gps.start()
+    #print('Started gps')
+    #time.sleep(0.5)
     ui.start()
+    #print('Started ui')
+    #time.sleep(0.5)
     audio.start()
+    #print('Started audio')
+    #time.sleep(0.5)
+    ui_display.start()
+    #print('Started ui_display')
+    #time.sleep(0.5)
 
     # Give the processes time to start/run
     time.sleep(1)

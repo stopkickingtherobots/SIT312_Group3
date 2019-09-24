@@ -140,7 +140,7 @@ class Ui_MainWindow(object):
 
         for i in range(0, self.audio_recv_db_rows):
 
-            db_item = self.message_db.get(doc_id= i + 1)
+            db_item = self.audio_recv_db.get(doc_id= i + 1)
 
             date_time = db_item.get('datetime')
             datetime_utc = datetime.datetime.utcfromtimestamp(float(date_time))
@@ -270,6 +270,7 @@ class Ui_MainWindow(object):
 
     def recorder_play_click(self):
         if self.file_to_play is not None:
+            pygame.mixer.pre_init(48000,-16,2, 1024)
             pygame.mixer.init()
             pygame.mixer.music.load(self.file_to_play)
             pygame.mixer.music.play()
@@ -282,6 +283,7 @@ class Ui_MainWindow(object):
             # Set text 'Play'
 
         elif not self.is_playing:
+            pygame.mixer.pre_init(48000,-16,2, 1024)
             pygame.mixer.init()
             pygame.mixer.music.load(self.current_recording)
             pygame.mixer.music.play()
@@ -293,8 +295,12 @@ class Ui_MainWindow(object):
         self.is_recording = False
         self.recorded = False
         self.file_to_play = None
+        pygame.mixer.pre_init(48000,-16,2, 1024)
         pygame.mixer.init()
-        pygame.mixer.music.unload()
+        try:
+            pygame.mixer.music.unload()
+        except AttributeError:
+            pass
 
     def recorder_cancel_click(self):
         self.file_to_play = None
@@ -303,7 +309,7 @@ class Ui_MainWindow(object):
         self.recorded = False
         try:
             pygame.mixer.music.unload()
-        except pygame.error:
+        except AttributeError:
             pass
         # tab switch
         self.tabWidget.setCurrentIndex(self.tabWidget.indexOf(self.tab_4))
@@ -320,6 +326,8 @@ class Ui_MainWindow(object):
             try:
                 pygame.mixer.music.unload()
             except pygame.error:
+                pass
+            except AttributeError:
                 pass
 
             device_id = self.comboBox_3.currentText()
@@ -366,8 +374,21 @@ class Ui_MainWindow(object):
         item.setText(description)
         self.tableWidget_3.setItem(self.audio_sent_db_rows - 1, 3, item)
 
-    def insert_audio_recieved(self, device_id, datetime, filename, description):
+    def insert_audio_recieved(self, data_segment):
+        print('Inserting received audio')
+        msg = data_segment.data
+        msg_arr = msg.split(',')
 
+        device_id = msg_arr[0]
+        date_time = msg_arr[1]
+        datetime_utc = datetime.datetime.utcfromtimestamp(float(date_time))
+        time_string = datetime_utc.strftime('%H:%M:%S %d/%m/%Y')
+        filename = msg_arr[2]
+        description = 'Audio message received remotely, inserting into GUI'
+
+        index = helper.insert_audio(self.audio_recv_db, device_id, date_time, filename, description)
+        
+        self.audio_recv_db_rows = index + 1
         self.tableWidget_4.setRowCount(self.audio_recv_db_rows)
 
         item = QtWidgets.QTableWidgetItem()
@@ -375,7 +396,7 @@ class Ui_MainWindow(object):
         self.tableWidget_4.setItem(self.audio_sent_db_rows - 1, 0, item)
 
         item = QtWidgets.QTableWidgetItem()
-        item.setText(QtWidgets.QApplication.translate("MainWindow", datetime, None, -1))
+        item.setText(QtWidgets.QApplication.translate("MainWindow", time_string, None, -1))
         self.tableWidget_4.setItem(self.audio_sent_db_rows - 1, 1, item)   
 
         item = QtWidgets.QTableWidgetItem()
@@ -385,6 +406,8 @@ class Ui_MainWindow(object):
         item = QtWidgets.QTableWidgetItem()
         item.setText(QtWidgets.QApplication.translate("MainWindow", description, None, -1))
         self.tableWidget_4.setItem(self.audio_sent_db_rows - 1, 3, item)
+
+        self.tabWidget.setCurrentIndex(3)
 
     def audio_record_click(self):
 
@@ -400,11 +423,12 @@ class Ui_MainWindow(object):
 
         item = self.tableWidget_3.item(row, column)
         self.cell_clicked_text = item.text()
+        print('Cell text: {0:}'.format(self.cell_clicked_text))
 
     def audio_play_click(self):
 
         if self.cell_clicked_text is not None:
-
+            pygame.mixer.pre_init(8000,-16,1, 1024)
             pygame.mixer.init()
             pygame.mixer.music.load(self.cell_clicked_text)
             pygame.mixer.music.play()
