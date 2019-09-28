@@ -17,6 +17,14 @@ from scipy import signal
 import numpy
 from pydub import AudioSegment
 from multiprocessing import Process
+<<<<<<< HEAD
+import time
+import math
+import wave
+from scipy import signal
+import struct
+=======
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
 
 
 class deviceUI():
@@ -32,6 +40,10 @@ class deviceUI():
         self.current_track_idx = 0
         self.playback_list = []  
         self.player = pygame.mixer   
+<<<<<<< HEAD
+        pygame.mixer.pre_init(8000, -16, 1, 1024)
+=======
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
         pygame.mixer.init()   
 
         self.__initialise_hardware()
@@ -51,8 +63,11 @@ class deviceUI():
         self.__add_padding_frame()
         self.__build_control_frame() 
         self.current_track = dict(self.playback_list[0])
+<<<<<<< HEAD
+=======
     
          
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
 
     def __initialise_hardware(self):        
         self.pijuice = PiJuice(1, 0x14)
@@ -72,7 +87,11 @@ class deviceUI():
         self.window.config(cursor='none')
         self.window.geometry('320x480')
         self.window['bg'] = "white"
+<<<<<<< HEAD
+        self.window.overrideredirect(True)
+=======
         #self.window.overrideredirect(True)
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
         self.window.title(' ')
         self.window.protocol("WM_DELETE_WINDOW", self.close)      
 
@@ -425,7 +444,11 @@ class deviceUI():
         for d in data:
             weight = self.calculate_distance(d, current_location)
             if weight < self.poi_range_threshold or d["title"] == current_track["title"]:
+<<<<<<< HEAD
+                entry = {"handle":"audio/"+d["filename"], "title":d["title"], "length":d["length"], "weight": weight}  
+=======
                 entry = {"handle":"./audio/"+d["filename"], "title":d["title"], "length":d["length"], "weight": weight}  
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
             self.playback_list.append(entry)
 
         self.playback_list.sort(key=lambda item:item["weight"])
@@ -447,8 +470,20 @@ class deviceUI():
 
     def play(self):
         self.player.stop()                         # stops any track currently playing
+<<<<<<< HEAD
+        print('Playing: {0:}'.format(self.current_track["handle"]))
+        self.player.pre_init(8000, -16, 1, 1024)
+        self.player.init()  
         audio = self.player.Sound(self.current_track["handle"])
         self.player.Sound.play(audio)
+        #pygame.mixer.pre_init(8000, -16, 1, 1024)
+        #pygame.mixer.init()
+        #pygame.mixer.music.load(self.current_track["handle"])
+        #pygame.mixer.music.play()
+=======
+        audio = self.player.Sound(self.current_track["handle"])
+        self.player.Sound.play(audio)
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
         return(audio)
 
     def pause(self):
@@ -470,6 +505,19 @@ class deviceUI():
         RECORD_SECONDS = 10
         FILENAME = "message"+strftime('%H:%M', localtime())
         TARGET = "./audio/audio_out/"+FILENAME+".ogg"
+<<<<<<< HEAD
+
+        # Audio Recording
+        audio = pyaudio.PyAudio()
+
+        # start Recording
+        stream = audio.open(format=FORMAT, channels=CHANNELS,rate=RATE, input=True,frames_per_buffer=CHUNK)
+        print ('recording...')
+
+        data = stream.read(int(RATE/CHUNK) * CHUNK * RECORD_SECONDS)
+        print ('finished recording')
+
+=======
       
         # Audio Recording
         audio = pyaudio.PyAudio()
@@ -481,11 +529,46 @@ class deviceUI():
         data = stream.read(int(RATE/CHUNK) * CHUNK * RECORD_SECONDS)
         print ('finished recording')
         
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
         # stop Recording
         stream.stop_stream()
         stream.close()
         audio.terminate()
         
+<<<<<<< HEAD
+        wave_data = struct.unpack("%ih" % int(RATE/CHUNK) * CHUNK *RECORD_SECONDS, data) # '%ih' is 16-bit format
+    
+        y = numpy.floor(numpy.log2(len(wave_data)))
+        nextpow2  = numpy.power(2, y+1)
+
+        diff = (nextpow2 - len(wave_data)) % 2
+        diff_rate = len(wave_data) / nextpow2
+
+        signal_arr = numpy.zeros(int(nextpow2))
+        signal_arr[0:len(wave_data)] = wave_data
+
+        #start = timer()
+        recording_resample = signal.resample(signal_arr, int(len(signal_arr)/6)).astype(numpy.int16)
+        #end = timer()
+
+        resample_len = int(len(recording_resample) * diff_rate)
+
+        if resample_len % 2 == 1:
+                resample_len -= 1
+        truncate_arr = numpy.zeros(resample_len)
+
+        truncate_arr = recording_resample[:len(truncate_arr)]
+
+        resamples = b''
+
+        for i in range(0, len(truncate_arr)):
+                resamples += (int(truncate_arr[i]/256)).to_bytes(2, byteorder='big', signed=True)
+
+        pydub_audio = AudioSegment(resamples, sample_width=2, frame_rate=8000, channels=1)
+
+        pydub_audio.export(TARGET, format = "ogg")  # ~50% reduction in file size; 91KB per 10 seconds
+
+=======
         # Exporting / SciPy resampling
         recording = AudioSegment(data, sample_width=2, frame_rate=RATE, channels=1)
         recording_samples = recording.get_array_of_samples()
@@ -498,6 +581,7 @@ class deviceUI():
         newrecording = AudioSegment(resamples, sample_width=2, frame_rate=8000, channels=1)
         newrecording.export(TARGET, format = "ogg")
         
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
         print('Done export')
 
         new_data = {"filename": FILENAME+".ogg", "is_sent": False}
@@ -514,4 +598,12 @@ class deviceUI():
 
 if __name__ == "__main__":
     interface = deviceUI()
+<<<<<<< HEAD
+    interface.start()  
+
+def main():
+    interface = deviceUI()
+    interface.start()  
+=======
     interface.start()    
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
