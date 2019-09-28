@@ -358,7 +358,7 @@ def main(gps_queue, distress_queue, message_queue, audio_queue_in, audio_queue_o
 
     print('Begin Wireless')
 
-    device = XBeeDevice('COM7', 230400)
+    device = XBeeDevice('COM3', 230400)
 
     device.open()
     device.flush_queues()
