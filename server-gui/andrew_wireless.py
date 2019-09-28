@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from multiprocessing import Process, Queue # Used for multiprocessing
 import serial
 import time
@@ -436,4 +437,13 @@ def main(gps_queue, distress_queue, message_queue, audio_queue_in, audio_queue_o
             pass
             #print('Empty audio_out queue, continuing')
         
+=======
+from multiprocessing import Process, Queue # Used for multiprocessing
+import time
+
+def main(gps_queue, distress_queue, message_queue, audio_queue_in, audio_queue_out):
+
+    print('Begin wireless')
+
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
     print('End wireless')

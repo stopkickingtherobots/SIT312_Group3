@@ -112,5 +112,5 @@ while True:
         if gps.latitude and gps.longitude is not None:
             dictionary = {"latitude": gps.latitude, "longitude": gps.longitude}
             pubnub.publish().channel('blue').message(dictionary).pn_async(publish_callback)
-            print('eol')  // End of Line
+            print('eol')
 

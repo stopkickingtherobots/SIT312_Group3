@@ -1,1 +1,5 @@
+<<<<<<< HEAD
 {"_default": {"1": {"device_id": "HOME BASE", "datetime": "1569452093.513128", "message": "0013A2004155E2AB sent distress from: LAT: 150.111 LON: -45.444 at: 22:54:53 25/09/2019"}, "2": {"device_id": "0013A2004155E2AB", "datetime": 1569452106.545667, "message": "Help is one thway"}, "3": {"device_id": "HOME BASE", "datetime": "1569453207.094369", "message": "0013A2004155E2AB sent distress from: LAT: 150.111 LON: -45.444 at: 23:13:27 25/09/2019"}, "4": {"device_id": "0013A2004155E2AB", "datetime": 1569453228.508591, "message": "RECVD: Help on its way"}}}
+=======
+{"_default": {"1": {"device_id": "0013A2004155E2A6", "datetime": "11:20PM September 05, 2019", "message": "Run!"}, "2": {"device_id": "BROADCAST", "datetime": "11:20PM September 05, 2019", "message": "Boat is leaving soon..."}, "3": {"device_id": "Test ID", "datetime": "1230h 03MAR19", "message": "Test Message from queue"}, "4": {"device_id": "0013A2004155E2AB", "datetime": "11:32PM September 05, 2019", "message": "Run!"}}}
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd

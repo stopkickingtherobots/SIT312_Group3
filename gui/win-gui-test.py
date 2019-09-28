@@ -10,7 +10,7 @@ from PyQt5 import QtCore, QtWidgets, QtWebEngineWidgets
 app = QtWidgets.QApplication(sys.argv)
 view = QtWebEngineWidgets.QWebEngineView()
 
-view.load(QtCore.QUrl().fromLocalFile(os.path.split(os.path.abspath(__file__))[0]+r'\html\plot_points_to_map.html'))
+view.load(QtCore.QUrl().fromLocalFile(os.path.split(os.path.abspath(__file__))[0]+r'\html\tracking_realtime.html'))
 
 view.show()
 sys.exit(app.exec_())

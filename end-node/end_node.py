@@ -26,9 +26,13 @@ if __name__ == "__main__":
 
     ui_display = Process(target = ui_display)
 
+<<<<<<< HEAD
     wireless.start()   
     #print('Started Wireless')
     #time.sleep(0.5) 
+=======
+    wireless.start()    
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
     gps.start()
     #print('Started gps')
     #time.sleep(0.5)
@@ -36,11 +40,15 @@ if __name__ == "__main__":
     #print('Started ui')
     #time.sleep(0.5)
     audio.start()
+<<<<<<< HEAD
     #print('Started audio')
     #time.sleep(0.5)
     ui_display.start()
     #print('Started ui_display')
     #time.sleep(0.5)
+=======
+    ui_display.start()
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
 
     # Give the processes time to start/run
     time.sleep(1)

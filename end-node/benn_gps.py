@@ -26,6 +26,7 @@ def get_gps():
 
     # for a computer, use the pyserial library for uart access
     import serial
+<<<<<<< HEAD
     uart = serial.Serial("/dev/ttyUSB1", baudrate=9600, timeout=3000)
 
     # Create a GPS module instance.
@@ -104,14 +105,84 @@ def get_gps():
                 pass
             #gps_queue.put(msg)  
             return None
+=======
+    uart = serial.Serial("/dev/ttyS0", baudrate=9600, timeout=3000)
+
+    # Create a GPS module instance.
+    gps = adafruit_gps.GPS(uart, debug=False)
+
+    # Turn on the basic GGA and RMC info (what you typically want)
+    gps.send_command(b'PMTK314,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0')
+
+    # Set update rate to once every 10 seconds (0.1hz)
+    gps.send_command(b'PMTK220,10000')
+
+    # Main loop runs forever printing the location, etc. every second.
+    last_print = time.monotonic()
+    while True:
+        # Make sure to call gps.update() every loop iteration and at least twice
+        # as fast as data comes from the GPS unit (usually every second).
+        # This returns a bool that's true if it parsed new data (you can ignore it
+        # though if you don't care and instead look at the has_fix property).
+        gps.update()
+        # Every second print out current location details if there's a fix.
+        current = time.monotonic()
+        if current - last_print >= 1.0:
+            last_print = current
+            if not gps.has_fix:
+                # Try again if we don't have a fix yet.
+                print('Waiting for fix...')
+                continue
+            # We have a fix! (gps.has_fix is true)
+            # Print out details about the fix like location, date, etc.
+            print('=' * 40)  # Print a separator line.
+            print('Fix timestamp: {}/{}/{} {:02}:{:02}:{:02}'.format(
+                gps.timestamp_utc.tm_mon,   # Grab parts of the time from the
+                gps.timestamp_utc.tm_mday,  # struct_time object that holds
+                gps.timestamp_utc.tm_year,  # the fix time.  Note you might
+                gps.timestamp_utc.tm_hour,  # not get all data like year, day,
+                gps.timestamp_utc.tm_min,   # month!
+                gps.timestamp_utc.tm_sec))
+            print('Latitude: {0:.6f} degrees'.format(gps.latitude))
+            print('Longitude: {0:.6f} degrees'.format(gps.longitude))
+            print('Fix quality: {}'.format(gps.fix_quality))
+            # Some attributes beyond latitude, longitude and timestamp are optional
+            # and might not be present.  Check if they're None before trying to use!
+            #if gps.altitude_m is not None:
+            #   print('Altitude: {} meters'.format(gps.altitude_m))
+    
+            # msg = str(gps.latitude) + ',' + str(gps.longitude)
+            # return msg
+
+            msg = Data_Segment('gps',1,1,[gps.latitude, gps.longitude, gps.timestamp_utc])
+
+            # Write to text file 
+            file = open("gps_coordinates.txt","w") 
+            file.write(str(gps.latitude) + ",  " + str(gps.longitude) + ",  " 
+            + '{}/{}/{} {:02}:{:02}:{:02}'.format(
+                gps.timestamp_utc.tm_year, 
+                gps.timestamp_utc.tm_mon,   
+                gps.timestamp_utc.tm_mday,                   
+                gps.timestamp_utc.tm_hour,  
+                gps.timestamp_utc.tm_min,   
+                gps.timestamp_utc.tm_sec)) 
+            file.close()
+
+            gps_queue.put(msg)  
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
 
 def main(gps_queue_out):
     print('Begin gps')
 
     while(True): 
         gps_msg = get_gps()
+<<<<<<< HEAD
         if gps_msg is not None:
 
             gps_queue_out.put(gps_msg)
+=======
+
+        gps_queue_out.put(gps_msg)
+>>>>>>> 536bb62244a04a7ad2148b81b56f06155b3e39bd
 
     print('End gps')
